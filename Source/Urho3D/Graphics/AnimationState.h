@@ -27,6 +27,7 @@
 #include <EASTL/unordered_map.h>
 
 #include "../Container/Ptr.h"
+#include "../Graphics/Skeleton.h"
 #include "../Math/StringHash.h"
 
 namespace Urho3D
@@ -191,7 +192,7 @@ public:
 
 private:
     /// Apply single transformation track to target object. Key frame hint is updated on call.
-    void ApplyTransformTrack(const AnimationTrack& track,
+    void ApplyTransformTrack(const AnimationTrack& track, AnimationChannelFlags& validChannels,
         Node* node, Bone* bone, unsigned& frame, float weight, bool silent);
     /// Apply single attribute track to target object. Key frame hint is updated on call.
     void ApplyAttributeTrack(AttributeAnimationStateTrack& stateTrack, float weight);

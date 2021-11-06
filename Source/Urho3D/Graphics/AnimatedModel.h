@@ -84,6 +84,8 @@ public:
     /// Set whether to update animation and the bounding box when not visible. Recommended to enable for physically controlled models like ragdolls.
     /// @property
     void SetUpdateInvisible(bool enable);
+    /// Set whether to reset whole skeleton on before animation.
+    void SetFullReset(bool enable);
     /// Set vertex morph weight by index.
     void SetMorphWeight(unsigned index, float weight);
     /// Set vertex morph weight by name.
@@ -109,6 +111,10 @@ public:
     /// Return whether to update animation when not visible.
     /// @property
     bool GetUpdateInvisible() const { return updateInvisible_; }
+
+    /// Return whether to reset whole skeleton before animation.
+    /// @property
+    bool GetFullReset() const { return fullReset_; }
 
     /// Return all vertex morphs.
     const ea::vector<ModelMorph>& GetMorphs() const { return morphs_; }
@@ -217,6 +223,8 @@ private:
     float animationLodDistance_;
     /// Update animation when invisible flag.
     bool updateInvisible_;
+    /// Whether to reset whole skeleton on update.
+    bool fullReset_{ true };
     /// Animation dirty flag.
     bool animationDirty_;
     /// Vertex morphs dirty flag.

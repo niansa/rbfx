@@ -347,7 +347,8 @@ void AnimationState::ApplyModelTracks()
         if (!stateTrack.bone_->animated_)
             continue;
 
-        ApplyTransformTrack(*stateTrack.track_, stateTrack.node_, stateTrack.bone_, stateTrack.keyFrame_, weight_, true);
+        ApplyTransformTrack(*stateTrack.track_, stateTrack.bone_->validChannels_,
+            stateTrack.node_, stateTrack.bone_, stateTrack.keyFrame_, weight_, true);
     }
 }
 
@@ -358,7 +359,9 @@ void AnimationState::ApplyNodeTracks()
 
     for (NodeAnimationStateTrack& stateTrack : nodeTracks_)
     {
-        ApplyTransformTrack(*stateTrack.track_, stateTrack.node_, nullptr, stateTrack.keyFrame_, weight_, false);
+        AnimationChannelFlags validChannels = CHANNEL_ALL; // TODO: Fix me
+        ApplyTransformTrack(*stateTrack.track_, validChannels,
+            stateTrack.node_, nullptr, stateTrack.keyFrame_, weight_, false);
     }
 }
 
@@ -373,7 +376,7 @@ void AnimationState::ApplyAttributeTracks()
     }
 }
 
-void AnimationState::ApplyTransformTrack(const AnimationTrack& track,
+void AnimationState::ApplyTransformTrack(const AnimationTrack& track, AnimationChannelFlags& validChannels,
     Node* node, Bone* bone, unsigned& frame, float weight, bool silent)
 {
     if (track.keyFrames_.empty() || !node)
@@ -411,11 +414,11 @@ void AnimationState::ApplyTransformTrack(const AnimationTrack& track,
     {
         if (!Equals(weight, 1.0f)) // not full weight
         {
-            if (channelMask & CHANNEL_POSITION)
+            if (channelMask & validChannels & CHANNEL_POSITION)
                 newTransform.position_ = node->GetPosition().Lerp(newTransform.position_, weight);
-            if (channelMask & CHANNEL_ROTATION)
+            if (channelMask & validChannels & CHANNEL_ROTATION)
                 newTransform.rotation_ = node->GetRotation().Slerp(newTransform.rotation_, weight);
-            if (channelMask & CHANNEL_SCALE)
+            if (channelMask & validChannels & CHANNEL_SCALE)
                 newTransform.scale_ = node->GetScale().Lerp(newTransform.scale_, weight);
         }
     }
@@ -438,6 +441,8 @@ void AnimationState::ApplyTransformTrack(const AnimationTrack& track,
         if (channelMask & CHANNEL_SCALE)
             node->SetScale(newTransform.scale_);
     }
+
+    validChannels |= channelMask;
 }
 
 void AnimationState::ApplyAttributeTrack(AttributeAnimationStateTrack& stateTrack, float weight)

@@ -30,6 +30,16 @@
 namespace Urho3D
 {
 
+enum AnimationChannel : unsigned char
+{
+    CHANNEL_NONE = 0,
+    CHANNEL_POSITION = 1 << 0,
+    CHANNEL_ROTATION = 1 << 1,
+    CHANNEL_SCALE    = 1 << 2,
+    CHANNEL_ALL = CHANNEL_POSITION | CHANNEL_ROTATION | CHANNEL_SCALE
+};
+URHO3D_FLAGSET(AnimationChannel, AnimationChannelFlags);
+
 enum BoneCollisionShape : unsigned char
 {
     BONECOLLISION_NONE = 0x0,
@@ -56,18 +66,6 @@ struct Bone
     {
     }
 
-    /// Instance equality operator.
-    bool operator ==(const Bone& rhs) const
-    {
-        return this == &rhs;
-    }
-
-    /// Instance inequality operator.
-    bool operator !=(const Bone& rhs) const
-    {
-        return this != &rhs;
-    }
-
     /// Bone name.
     ea::string name_;
     /// Bone name hash.
@@ -90,8 +88,11 @@ struct Bone
     float radius_;
     /// Local-space bounding box.
     BoundingBox boundingBox_;
+
     /// Scene node.
     WeakPtr<Node> node_;
+    /// Channel mask used for soft reset.
+    AnimationChannelFlags validChannels_;
 };
 
 /// Hierarchical collection of bones.
@@ -152,6 +153,8 @@ public:
 
     /// Reset all animating bones to initial positions without marking the nodes dirty. Requires the node dirtying to be performed later.
     void ResetSilent();
+    /// Reset channel masks without changing nodes.
+    void ResetChannelMasks();
 
 private:
     /// Bones.

@@ -102,6 +102,7 @@ void AnimatedModel::RegisterObject(Context* context)
     URHO3D_ACCESSOR_ATTRIBUTE("Can Be Occluded", IsOccludee, SetOccludee, bool, true, AM_DEFAULT);
     URHO3D_ATTRIBUTE("Cast Shadows", bool, castShadows_, false, AM_DEFAULT);
     URHO3D_ACCESSOR_ATTRIBUTE("Update When Invisible", GetUpdateInvisible, SetUpdateInvisible, bool, false, AM_DEFAULT);
+    URHO3D_ACCESSOR_ATTRIBUTE("Reset to Bind Pose", GetFullReset, SetFullReset, bool, true, AM_DEFAULT);
     URHO3D_ACCESSOR_ATTRIBUTE("Draw Distance", GetDrawDistance, SetDrawDistance, float, 0.0f, AM_DEFAULT);
     URHO3D_ACCESSOR_ATTRIBUTE("Shadow Distance", GetShadowDistance, SetShadowDistance, float, 0.0f, AM_DEFAULT);
     URHO3D_ACCESSOR_ATTRIBUTE("LOD Bias", GetLodBias, SetLodBias, float, 1.0f, AM_DEFAULT);
@@ -451,6 +452,11 @@ void AnimatedModel::SetUpdateInvisible(bool enable)
     MarkNetworkUpdate();
 }
 
+void AnimatedModel::SetFullReset(bool enable)
+{
+    fullReset_ = enable;
+    MarkNetworkUpdate();
+}
 
 void AnimatedModel::SetMorphWeight(unsigned index, float weight)
 {
@@ -977,7 +983,10 @@ void AnimatedModel::ApplyAnimation()
     // (first AnimatedModel in a node)
     if (isMaster_)
     {
-        skeleton_.ResetSilent();
+        if (fullReset_)
+            skeleton_.ResetSilent();
+        else
+            skeleton_.ResetChannelMasks();
 
         // AnimationStateSource is a weak pointer which may or may not be an issue
         if (AnimationStateSource* animationStateSource = animationStateSource_)

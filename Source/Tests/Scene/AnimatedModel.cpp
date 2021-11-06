@@ -479,3 +479,109 @@ TEST_CASE("Variant animation tracks")
     REQUIRE(childNodeText->GetFontSize() == 27.5f);
     REQUIRE(childNodeText->GetText() == "B");
 }
+
+TEST_CASE("Full and soft reset")
+{
+    auto context = Tests::CreateCompleteTestContext();
+    auto cache = context->GetSubsystem<ResourceCache>();
+
+    auto model = Tests::CreateSkinnedQuad_Model(context)->ExportModel("@/SkinnedQuad.mdl");
+    model->GetSkeleton().GetModifiableBones()[2].initialPosition_ = { 0.0f, 10.0f, 0.0f };
+    cache->AddManualResource(model);
+
+    /// Animation values:
+    ///             TranslateX      TranslateZ
+    /// T = 0.0:    0.0, 1.0, 0.0   0.0, 1.0, 0.0
+    /// T = 0.5:   -1.0, 1.0, 0.0   0.0, 1.0,-4.0
+    /// T = 1.0:    0.0, 1.0, 0.0   0.0, 1.0, 0.0
+    /// T = 1.5:    1.0, 1.0, 0.0   0.0, 1.0, 4.0
+    /// T = 2.0:    0.0, 1.0, 0.0   0.0, 1.0, 0.0
+    auto animationTranslateX = Tests::CreateLoopedTranslationAnimation(context,
+        "Tests/TranslateX.ani", "Quad 2", { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f }, 2.0f);
+    auto animationTranslateZ = Tests::CreateLoopedTranslationAnimation(context,
+        "Tests/TranslateZ.ani", "Quad 2", { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 4.0f }, 2.0f);
+
+    cache->AddManualResource(animationTranslateX);
+    cache->AddManualResource(animationTranslateZ);
+
+    // Test AnimatedModel with full reset
+    {
+        // Setup
+        auto scene = MakeShared<Scene>(context);
+        scene->CreateComponent<Octree>();
+
+        auto node = scene->CreateChild("Node");
+        auto animatedModel = node->CreateComponent<AnimatedModel>();
+        animatedModel->SetModel(model);
+
+        Tests::NodeRef quad1{ scene, "Quad 1" };
+        Tests::NodeRef quad2{ scene, "Quad 2" };
+
+        // Everything is scaled 10 times
+        quad1->SetScale(10.0f);
+
+        // Play TranslateX
+        auto animationController = node->CreateComponent<AnimationController>();
+        animationController->Play("Tests/TranslateX.ani", 0, true, 0.5f);
+
+        // Time 0.25: 50% of bind pose, 50% of TranslateX at T=0.25, no scale
+        Tests::RunFrame(context, 0.25f);
+        REQUIRE(quad2->GetWorldPosition().Equals({ -0.25f, 5.5f, 0.0f }, M_LARGE_EPSILON));
+
+        // Time 0.5: 0% of bind pose, 100% of TranslateX at T=0.5, no scale
+        Tests::RunFrame(context, 0.25f);
+        REQUIRE(quad2->GetWorldPosition().Equals({ -1.0f, 1.0f, 0.0f }, M_LARGE_EPSILON));
+
+        // Play TranslateZ instead of TranslateX
+        animationController->PlayExclusive("Tests/TranslateZ.ani", 0, true, 0.5f);
+
+        // Time 0.75: 25% of bind pose, 25% of TranslateX at T=0.75, 50% of TranslateZ at T=0.25, no scale
+        Tests::RunFrame(context, 0.25f);
+        REQUIRE(quad2->GetWorldPosition().Equals({ -0.125f, 3.25f, -1.0f }, M_LARGE_EPSILON));
+
+        // Time 1.0: 0% of bind pose, 0% of TranslateX, 100% of TranslateZ at T=0.5, no scale
+        Tests::RunFrame(context, 0.25f);
+        REQUIRE(quad2->GetWorldPosition().Equals({ 0.0f, 1.0f, -4.0f }, M_LARGE_EPSILON));
+    }
+
+    // Test AnimatedModel with soft reset
+    {
+        // Setup
+        auto scene = MakeShared<Scene>(context);
+        scene->CreateComponent<Octree>();
+
+        auto node = scene->CreateChild("Node");
+        auto animatedModel = node->CreateComponent<AnimatedModel>();
+        animatedModel->SetModel(model);
+        animatedModel->SetFullReset(false);
+
+        Tests::NodeRef quad1{ scene, "Quad 1" };
+        Tests::NodeRef quad2{ scene, "Quad 2" };
+
+        // Everything is scaled 10 times
+        quad1->SetScale(10.0f);
+
+        // Play TranslateX
+        auto animationController = node->CreateComponent<AnimationController>();
+        animationController->Play("Tests/TranslateX.ani", 0, true, 0.5f);
+
+        // Time 0.25: 100% of TranslateX at T=0.25, scaled
+        Tests::RunFrame(context, 0.25f);
+        REQUIRE(quad2->GetWorldPosition().Equals(10 * Vector3{ -0.5f, 1.0f, 0.0f }, M_LARGE_EPSILON));
+
+        // Time 0.5: 100% of TranslateX at T=0.5, scaled
+        Tests::RunFrame(context, 0.25f);
+        REQUIRE(quad2->GetWorldPosition().Equals(10 * Vector3{ -1.0f, 1.0f, 0.0f }, M_LARGE_EPSILON));
+
+        // Play TranslateZ instead of TranslateX
+        animationController->PlayExclusive("Tests/TranslateZ.ani", 0, true, 0.5f);
+
+        // Time 0.75: 50% of TranslateX at T=0.75, 50% of TranslateZ at T=0.25, scaled
+        Tests::RunFrame(context, 0.25f);
+        REQUIRE(quad2->GetWorldPosition().Equals(10 * Vector3{ -0.25f, 1.0f, -1.0f }, M_LARGE_EPSILON));
+
+        // Time 1.0: 0% of TranslateX, 100% of TranslateZ at T=0.5, scaled
+        Tests::RunFrame(context, 0.25f);
+        REQUIRE(quad2->GetWorldPosition().Equals(10 * Vector3{ 0.0f, 1.0f, -4.0f }, M_LARGE_EPSILON));
+    }
+}

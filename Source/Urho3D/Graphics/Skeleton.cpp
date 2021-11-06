@@ -133,22 +133,33 @@ void Skeleton::ClearBones()
 
 void Skeleton::Reset()
 {
-    for (auto i = bones_.begin(); i != bones_.end(); ++i)
+    for (Bone& bone : bones_)
     {
-        if (i->animated_ && i->node_)
-            i->node_->SetTransform(i->initialPosition_, i->initialRotation_, i->initialScale_);
+        if (bone.animated_ && bone.node_)
+        {
+            bone.node_->SetTransform(bone.initialPosition_, bone.initialRotation_, bone.initialScale_);
+            bone.validChannels_ = CHANNEL_ALL;
+        }
     }
 }
 
 void Skeleton::ResetSilent()
 {
-    for (auto i = bones_.begin(); i != bones_.end(); ++i)
+    for (Bone& bone : bones_)
     {
-        if (i->animated_ && i->node_)
-            i->node_->SetTransformSilent(i->initialPosition_, i->initialRotation_, i->initialScale_);
+        if (bone.animated_ && bone.node_)
+        {
+            bone.node_->SetTransformSilent(bone.initialPosition_, bone.initialRotation_, bone.initialScale_);
+            bone.validChannels_ = CHANNEL_ALL;
+        }
     }
 }
 
+void Skeleton::ResetChannelMasks()
+{
+    for (Bone& bone : bones_)
+        bone.validChannels_ = CHANNEL_NONE;
+}
 
 Bone* Skeleton::GetRootBone()
 {
