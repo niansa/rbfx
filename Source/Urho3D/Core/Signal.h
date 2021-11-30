@@ -172,7 +172,7 @@ protected:
 
             auto receiver = static_cast<Receiver*>(receiverPtr);
             // MinGW build fails at ea::invoke ATM, call as member function
-#ifdef __MINGW32__
+#if 0 //ifdef __MINGW32__
             if constexpr (INVOKE_SENDER_ARGS(bool))
                 return (receiver->*handler)(sender, args...);
             else if constexpr (INVOKE_SENDER_ARGS(void))
